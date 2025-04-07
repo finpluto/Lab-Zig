@@ -1,0 +1,22 @@
+.{
+    .name = .lab_zig,
+    .version = "0.0.0",
+    .fingerprint = 0x5cc1d75a64920057,
+    .minimum_zig_version = "0.14.0",
+
+    .dependencies = .{
+        .SDL2 = .{
+            .url = "git+https://github.com/finpluto/SDL.zig.git#master",
+            .hash = "SDL2-0.0.0-yMCQiqulBACi269pqhS_KgZy5uD-jNKQJjIff0VPLNdT",
+        },
+        .cglm = .{
+            .url = "git+https://github.com/finpluto/cglm.git#master",
+            .hash = "N-V-__8AAGVQJAAGkACuAki2gAZzCluy4wkIWZISs5H8c2IO",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
