@@ -32,7 +32,7 @@ pub fn main() !void {
         .screen_height = screen_height,
         .screen_width = screen_width,
     });
-    defer animator.destroy();
+    defer animator.deinit();
 
     mainLoop: while (true) {
         while (SDL.pollEvent()) |ev| {

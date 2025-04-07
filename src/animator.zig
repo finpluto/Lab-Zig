@@ -68,10 +68,10 @@ pub fn init(opts: *const AnimatorInitOpts) !Self {
     };
 }
 
-pub fn destroy(self: Self) void {
+pub fn deinit(self: Self) void {
     self.renderer.destroy();
-    _ = self.allocator.free(self.pixelBuffer);
-    _ = self.allocator.free(self.stars);
+    self.allocator.free(self.pixelBuffer);
+    self.allocator.free(self.stars);
 }
 
 fn update_star(self: *Self, delta_t: u32) void {
