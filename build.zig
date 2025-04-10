@@ -5,10 +5,21 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const sdl_pkg = b.dependency("SDL2", .{
+    const sdl_wrapper = b.dependency("SDL2", .{
         .target = target,
         .optimize = optimize,
     });
+
+    var sdl_artifact: ?*std.Build.Step.Compile = null;
+
+    if (target.result.os.tag == .windows) {
+        const sdl_lib = b.dependency("SDL2_lib", .{
+            .target = target,
+            .optimize = optimize,
+        });
+        sdl_artifact = sdl_lib.artifact("SDL2");
+        b.installArtifact(sdl_artifact.?);
+    }
 
     const cglm_pkg = b.dependency("cglm", .{
         .target = target,
@@ -17,7 +28,7 @@ pub fn build(b: *std.Build) void {
 
     // HACK: use the dependency builder, then set dep_name to null to avoid creating new builder.
     // This sdk object is only used for linking.
-    const sdk = sdl.init(sdl_pkg.builder, .{
+    const sdk = sdl.init(sdl_wrapper.builder, .{
         .dep_name = null,
     });
 
@@ -27,16 +38,20 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    color_mod.addImport("sdl2", sdl_pkg.module("wrapper"));
+    color_mod.addImport("sdl2", sdl_wrapper.module("wrapper"));
     color_mod.addImport("cglm-binding", cglm_pkg.module("cglm-binding"));
 
     const color_exe = b.addExecutable(.{
-        .name = "lab_zig",
+        .name = "color",
         .root_module = color_mod,
     });
 
     // link sdl dependencies
-    sdk.link(color_exe, .dynamic, .SDL2);
+    if (target.result.os.tag == .windows) {
+        color_exe.linkLibrary(sdl_artifact.?);
+    } else {
+        sdk.link(color_exe, .dynamic, .SDL2);
+    }
     color_exe.linkLibC();
 
     b.installArtifact(color_exe);
@@ -58,16 +73,20 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    star_mod.addImport("sdl2", sdl_pkg.module("wrapper"));
+    star_mod.addImport("sdl2", sdl_wrapper.module("wrapper"));
     star_mod.addImport("cglm-binding", cglm_pkg.module("cglm-binding"));
 
     const star = b.addExecutable(.{
-        .name = "lab_zig",
+        .name = "star",
         .root_module = star_mod,
     });
 
     // link sdl dependencies
-    sdk.link(star, .dynamic, .SDL2);
+    if (target.result.os.tag == .windows) {
+        star.linkLibrary(sdl_artifact.?);
+    } else {
+        sdk.link(star, .dynamic, .SDL2);
+    }
     star.linkLibC();
 
     b.installArtifact(star);

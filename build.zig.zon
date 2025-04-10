@@ -13,6 +13,10 @@
             .url = "git+https://github.com/finpluto/cglm.git#master",
             .hash = "N-V-__8AAGVQJAAGkACuAki2gAZzCluy4wkIWZISs5H8c2IO",
         },
+        .SDL2_lib = .{
+            .url = "git+https://github.com/allyourcodebase/SDL.git#main",
+            .hash = "SDL-2.32.4-JToi30-TEgH42-HFmgINmgFPrAXOjaNp734Jh_wep6ZN",
+        },
     },
     .paths = .{
         "build.zig",
