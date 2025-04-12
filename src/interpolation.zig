@@ -1,9 +1,11 @@
 const std = @import("std");
 const SDL = @import("sdl2"); // Add this package by using sdk.getNativeModule
-const cglm = @import("bindings/cglm.zig");
+const math = std.math;
 
 const screen_height = 480;
 const screen_width = 640;
+
+const Vec3 = @Vector(3, f32);
 
 pub fn main() !void {
     try SDL.init(.{
@@ -55,33 +57,37 @@ pub fn main() !void {
 }
 
 fn screen_bilerp(comptime width: u32, comptime height: u32, allocator: std.mem.Allocator) ![]u8 {
-    const left_side = try allocator.alloc(cglm.Vec3, height);
+    const left_side = try allocator.alloc(Vec3, height);
     defer allocator.free(left_side);
-    const right_side = try allocator.alloc(cglm.Vec3, height);
+    const right_side = try allocator.alloc(Vec3, height);
     defer allocator.free(right_side);
 
     // LERP between top left & bottom left
-    interpolate(&.{ 1, 0, 0 }, &.{ 0, 1, 0 }, left_side);
+    interpolate(Vec3{ 1, 0, 0 }, Vec3{ 0, 1, 0 }, left_side);
     // ... and top right & bottom right
-    interpolate(&.{ 0, 0, 1 }, &.{ 1, 1, 0 }, right_side);
+    interpolate(Vec3{ 0, 0, 1 }, Vec3{ 1, 1, 0 }, right_side);
 
     const pixel_buf = try allocator.alloc(u8, width * height * 4);
 
-    const col_color_buf = try allocator.alloc(cglm.Vec3, width);
+    const col_color_buf = try allocator.alloc(Vec3, width);
     defer allocator.free(col_color_buf);
 
     for (0..height) |row_idx| {
         const left_color = left_side[row_idx];
         const right_color = right_side[row_idx];
 
-        interpolate(&left_color, &right_color, col_color_buf);
+        interpolate(left_color, right_color, col_color_buf);
 
         for (0..width) |col_idx| {
-            const rgb_vec = col_color_buf[col_idx];
             const alpha: u8 = 255;
-            const r: u8 = @intFromFloat(cglm.clamp(255 * rgb_vec[0], 0, 255));
-            const g: u8 = @intFromFloat(cglm.clamp(255 * rgb_vec[1], 0, 255));
-            const b: u8 = @intFromFloat(cglm.clamp(255 * rgb_vec[2], 0, 255));
+            const upper: Vec3 = @splat(255);
+            const lower: Vec3 = @splat(0);
+            const ret: @Vector(3, u8) = @intFromFloat(math.clamp(
+                col_color_buf[col_idx] * @as(Vec3, @splat(255)),
+                lower,
+                upper,
+            ));
+            const r, const g, const b = ret;
 
             // TODO: should check big endian and little endian here, cuz we're using 4 u8 to represent a u32.
             // here is big endian
@@ -94,39 +100,29 @@ fn screen_bilerp(comptime width: u32, comptime height: u32, allocator: std.mem.A
     return pixel_buf;
 }
 
-// LERP between two Vec3
-fn interpolate(a: *const cglm.Vec3, b: *const cglm.Vec3, result: []cglm.Vec3) void {
+fn interpolate(a: Vec3, b: Vec3, result: []Vec3) void {
     // how many vertices need to interpolate
     const l = result.len;
     for (0..l, result) |i, *vertex| {
-        var left_tmp = [_]f32{ 0, 0, 0 };
-        var right_tmp = [_]f32{ 0, 0, 0 };
-        cglm.vec3Scale(a, @floatFromInt(l - i - 1), &left_tmp);
-        cglm.vec3Scale(b, @floatFromInt(i), &right_tmp);
+        const left_tmp: Vec3 = a * @as(Vec3, @splat(@floatFromInt(l - i - 1)));
+        const right_tmp: Vec3 = b * @as(Vec3, @splat(@floatFromInt(i)));
 
-        var vec_sum = [_]f32{ 0, 0, 0 };
-        cglm.vec3Add(&left_tmp, &right_tmp, &vec_sum);
-        cglm.vec3DivScalar(&vec_sum, @floatFromInt(l - 1), vertex);
+        const vec_sum = left_tmp + right_tmp;
+        vertex.* = vec_sum / @as(Vec3, @splat(@floatFromInt(l - 1)));
     }
 }
 
-// This test will fail, the `cglm` lib doesn't output f32 in tolerant machine float eps, WEIRD.
-test "vec3 lerp" {
-    const expectVec3Equal = struct {
-        fn call(a: cglm.Vec3, b: cglm.Vec3) !void {
-            for (0..3) |i| {
-                try std.testing.expectApproxEqAbs(a[i], b[i], std.math.floatEps(f32));
-            }
-        }
-    }.call;
+test "native @Vector lerp test" {
+    const meta = @import("std").meta;
+    const expect = @import("std").testing.expect;
 
-    const a = &[_]f32{ 1, 4, 9.2 };
-    const b = &[_]f32{ 4, 1, 9.8 };
-    var result: [4]cglm.Vec3 = undefined;
+    const a: Vec3 = .{ 1, 4, 9.2 };
+    const b: Vec3 = .{ 4, 1, 9.8 };
+    var result: [4]Vec3 = undefined;
     interpolate(a, b, &result);
-    // this test case come from LAB1 instruction.
-    try expectVec3Equal([3]f32{ 1, 4, 9.2 }, result[0]);
-    try expectVec3Equal([3]f32{ 2, 3, 9.4 }, result[1]);
-    try expectVec3Equal([3]f32{ 3, 2, 9.6 }, result[2]);
-    try expectVec3Equal([3]f32{ 4, 1, 9.8 }, result[3]);
+
+    try expect(meta.eql(Vec3{ 1, 4, 9.2 }, result[0]));
+    try expect(meta.eql(Vec3{ 2, 3, 9.4 }, result[1]));
+    try expect(meta.eql(Vec3{ 3, 2, 9.6 }, result[2]));
+    try expect(meta.eql(Vec3{ 4, 1, 9.8 }, result[3]));
 }

@@ -12,19 +12,16 @@ pub fn build(b: *std.Build) void {
 
     var sdl_artifact: ?*std.Build.Step.Compile = null;
 
+    // use static link to SDL under windows
     if (target.result.os.tag == .windows) {
-        const sdl_lib = b.dependency("SDL2_lib", .{
+        if (b.lazyDependency("SDL2_lib", .{
             .target = target,
             .optimize = optimize,
-        });
-        sdl_artifact = sdl_lib.artifact("SDL2");
-        b.installArtifact(sdl_artifact.?);
+        })) |sdl_lib| {
+            sdl_artifact = sdl_lib.artifact("SDL2");
+            b.installArtifact(sdl_artifact.?);
+        }
     }
-
-    const cglm_pkg = b.dependency("cglm", .{
-        .target = target,
-        .optimize = optimize,
-    });
 
     // HACK: use the dependency builder, then set dep_name to null to avoid creating new builder.
     // This sdk object is only used for linking.
@@ -39,7 +36,6 @@ pub fn build(b: *std.Build) void {
     });
 
     color_mod.addImport("sdl2", sdl_wrapper.module("wrapper"));
-    color_mod.addImport("cglm-binding", cglm_pkg.module("cglm-binding"));
 
     const color_exe = b.addExecutable(.{
         .name = "color",
@@ -47,8 +43,8 @@ pub fn build(b: *std.Build) void {
     });
 
     // link sdl dependencies
-    if (target.result.os.tag == .windows) {
-        color_exe.linkLibrary(sdl_artifact.?);
+    if (sdl_artifact) |artifact| {
+        color_exe.linkLibrary(artifact);
     } else {
         sdk.link(color_exe, .dynamic, .SDL2);
     }
@@ -74,7 +70,6 @@ pub fn build(b: *std.Build) void {
     });
 
     star_mod.addImport("sdl2", sdl_wrapper.module("wrapper"));
-    star_mod.addImport("cglm-binding", cglm_pkg.module("cglm-binding"));
 
     const star = b.addExecutable(.{
         .name = "star",
@@ -82,8 +77,8 @@ pub fn build(b: *std.Build) void {
     });
 
     // link sdl dependencies
-    if (target.result.os.tag == .windows) {
-        star.linkLibrary(sdl_artifact.?);
+    if (sdl_artifact) |artifact| {
+        star.linkLibrary(artifact);
     } else {
         sdk.link(star, .dynamic, .SDL2);
     }
@@ -98,7 +93,7 @@ pub fn build(b: *std.Build) void {
         star_cmd.addArgs(args);
     }
 
-    const star_step = b.step("starfield", "Run the app");
+    const star_step = b.step("star", "Run the app");
     star_step.dependOn(&star_cmd.step);
 
     // testing
@@ -109,7 +104,6 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .root_source_file = b.path("test.zig"),
     });
-    test_exe.root_module.addImport("cglm-binding", cglm_pkg.module("cglm-binding"));
     const test_runner = b.addRunArtifact(test_exe);
     test_step.dependOn(&test_runner.step);
 }

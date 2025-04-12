@@ -1,6 +1,6 @@
 const SDL = @import("sdl2");
 const std = @import("std");
-const cglm = @import("bindings/cglm.zig");
+const math = std.math;
 const Self = @This();
 pub const AnimatorInitOpts = struct {
     allocator: std.mem.Allocator,
@@ -101,7 +101,7 @@ pub fn update(self: *Self) !void {
     for (self.stars) |s| {
         const z = s.z;
         const faded_color_component = 0.2 / (z * z);
-        const color_8bits: u8 = @intFromFloat(cglm.clamp(255 * faded_color_component, 0, 255));
+        const color_8bits: u8 = @intFromFloat(math.clamp(255 * faded_color_component, 0, 255));
 
         const width = @as(f32, @floatFromInt(self.width));
         const height = @as(f32, @floatFromInt(self.height));
