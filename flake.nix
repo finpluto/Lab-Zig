@@ -1,7 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:cachix/devenv-nixpkgs/rolling";
-    devenv.url = "github:cachix/devenv/v1.4.1";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     zig.url = "github:mitchellh/zig-overlay";
   };
 
@@ -11,9 +10,6 @@
     ...
   }:
     flake-parts.lib.mkFlake {inherit inputs;} {
-      imports = [
-        inputs.devenv.flakeModule
-      ];
       systems = nixpkgs.lib.systems.flakeExposed;
 
       perSystem = {
@@ -24,14 +20,16 @@
         system,
         ...
       }: {
-        devenv.shells.default = {
+        devShells.default = pkgs.mkShell {
           packages = with pkgs; [
+            cargo
+            rustc
+            zls
+            inputs'.zig.packages."0.14.0"
+          ];
+          nativeBuildInputs = with pkgs; [
             SDL2
           ];
-          languages.zig = {
-            enable = true;
-            package = inputs'.zig.packages."0.14.0";
-          };
         };
       };
     };

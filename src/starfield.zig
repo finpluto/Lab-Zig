@@ -9,7 +9,6 @@ pub fn main() !void {
     try SDL.init(.{
         .video = true,
         .events = true,
-        .audio = true,
     });
     defer SDL.quit();
 

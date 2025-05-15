@@ -14,6 +14,12 @@
             .hash = "SDL-2.32.4-JToi30-TEgH42-HFmgINmgFPrAXOjaNp734Jh_wep6ZN",
             .lazy = true,
         },
+        .aegleseeker = .{
+            .path = "../../../../KTH/DH2323/aegleseeker",
+        },
+        .rusterizer = .{
+            .path = "../../../../KTH/DH2323/rusterizer",
+        },
     },
     .paths = .{
         "build.zig",
